@@ -1,6 +1,6 @@
 # Lens Patent API Client
 
-A powerful web-based patent search tool that leverages the Lens Patent API with advanced boolean query building, AI-powered query generation, and result filtering capabilities.
+A web-based patent search tool that makes use of the Lens Patent API with very intuitive and user friendly AI assisted boolean query generation and result filtering capabilities.
 
 ## Overview
 
