@@ -54,7 +54,7 @@ This documentation will help you understand how to customize queries and make th
    OPENAI_API_KEY=your_openai_api_key_here
    ```
 
-   - **Lens API Key**: Get from [Lens.org API](https://www.lens.org/settings/api)
+   - **Lens API Key**: Get from [Lens.org API]([https://www.lens.org/settings/api](https://www.lens.org/lens/user/subscriptions)
    - **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/api-keys)
 
 5. **Run the server**
