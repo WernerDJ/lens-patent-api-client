@@ -101,7 +101,7 @@ These three patents make a good example for testing the application:
 
 3. **Search**
    - Click "Check Count" to see total matching results
-   - Set "Results Size" to anything else than 10, by default, and  click again "Build Request"
+   - By default the results list has 10 documents, if you wish to retrieve more set "Results Size" to anything else than 10, and  click again "Build Request"
    - Click "Retrieve Results"
 
 4. **Export**
