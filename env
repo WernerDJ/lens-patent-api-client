@@ -1,0 +1,6 @@
+Obtain the API Keys from The Lens by subscribing to a free 14 day trial, you will receive instructions on how to access the API interface by email
+The OPenAI API key is quite easy to obtain, and the access also pretty straightforward, you will need to include it here too
+Finally delete this line and those above this one, and rename this file to .env
+
+LENS_API_KEY=XXXXXXXXXXXXXXXXXXXXX
+OPENAI_API_KEY=XXXXXXXXXXXXXXXXXXXXX
