@@ -40,23 +40,20 @@ def validate_boolean_query(query):
     if query.count('(') != query.count(')'):
         return False
     
-    # Check for AND/OR inside parentheses (should be OR only)
-    # This is a simple check - look for patterns like (word1 AND word2)
-    if re.search(r'\([^)]*AND[^)]*\)', query, re.IGNORECASE):
-        print(f"⚠️  Warning: Found AND inside parentheses in: {query}")
-        # Don't fail, just warn
-    
     return True
 
 def simplify_query(query):
-    """Simplify a query if it gets too complex"""
-    # Remove excessive parentheses
-    while '(((' in query:
-        query = query.replace('(((', '(')
-    while ')))' in query:
-        query = query.replace(')))', ')')
+    """Simplify a query by removing excessive parentheses and whitespace"""
+    if not query:
+        return query
     
-    # Clean up multiple spaces
+    # Remove double parentheses
+    while '((' in query:
+        query = query.replace('((', '(')
+    while '))' in query:
+        query = query.replace('))', ')')
+    
+    # Clean up spaces
     query = re.sub(r'\s+', ' ', query)
     
     return query.strip()
@@ -105,39 +102,46 @@ def home():
             .result-count { font-size: 16px; color: #667eea; font-weight: 600; }
             .column { flex: 1; }
             .column.full { grid-column: 1 / -1; }
+            .keyword-badge { display: inline-block; background: #667eea; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin: 2px; }
         </style>
     </head>
     <body>
         <div class="container">
             <div class="header">
                 <h1>🔍 Lens Patent API Client with AI</h1>
-                <p>Advanced Patent Search with Boolean Queries & LLM-Generated Strategies</p>
+                <p>Advanced Patent Search - Find patents that describe YOUR invention</p>
             </div>
             <div class="content">
                 <!-- LEFT COLUMN: AI QUERY GENERATOR -->
                 <div class="column">
                     <div class="section">
-                        <h3>AI Query Generator</h3>
+                        <h3>Your Invention Description</h3>
                         
-                        <label>Invention Description</label>
-                        <textarea id="inventionDescription" placeholder="Describe your invention in detail. Example: A system for real-time monitoring of blood pressure using artificial intelligence to predict cardiovascular events. Include key features, technical aspects, and intended applications."></textarea>
+                        <label>Describe Your Invention (MOST IMPORTANT)</label>
+                        <textarea id="inventionDescription" placeholder="Describe your invention in detail. Focus on:
+- What does it do? (function)
+- How does it work? (technical mechanism)
+- What are its key components? (structure)
+- What problem does it solve?
+
+Example: A wearable device that continuously monitors blood pressure using optical sensors and machine learning algorithms to predict cardiovascular events before they occur. The device consists of a wristband with LED arrays that measure blood volume changes, and a processor that analyzes the waveform patterns to detect anomalies." style="min-height: 150px;"></textarea>
                         
-                        <label style="margin-top: 12px;">Prior Art Patents (Required for best results)</label>
-                        <textarea id="priorArtPatents" placeholder="Enter patent IDs that you know are related to your invention. Separate multiple patents with ;; (double semicolon).&#10;&#10;Supported formats: EP4301213, CN121190407, CA3241308, US7654321&#10;Or with spaces/underscores: EP 4301213, CN_121190407&#10;&#10;Example:&#10;EP4301213 ;; CN121190407 ;; CA3241308&#10;&#10;The system will search Lens for these patents to validate your generated query."></textarea>
+                        <label style="margin-top: 12px;">Reference Prior Art (Optional - Helps with terminology)</label>
+                        <textarea id="priorArtPatents" placeholder="(Optional) Enter patent IDs that are in the SAME TECHNICAL FIELD. These help the system understand the vocabulary used in this area.&#10;&#10;Separate multiple patents with ;; (double semicolon)&#10;Example: EP4301213 ;; CN121190407 ;; CA3241308&#10;&#10;The system will analyze these to extract relevant technical terminology."></textarea>
                         
                         <div class="button-row">
-                            <button onclick="searchPriorArt()" class="primary">Search Prior Art in Lens</button>
+                            <button onclick="searchPriorArt()" class="primary">Analyze Prior Art Terminology</button>
                             <button onclick="clearPriorArt()">Clear</button>
                         </div>
                         
                         <div id="priorArtSearchStatus" class="status" style="margin-top: 8px;"></div>
                         <div id="priorArtResults" style="margin-top: 12px; padding: 10px; background: #f0f4ff; border-radius: 4px; display: none;">
-                            <h4 style="margin-top: 0;">Prior Art Identification Results:</h4>
+                            <h4 style="margin-top: 0;">Reference Patents Analyzed:</h4>
                             <div id="priorArtResultsList" style="max-height: 200px; overflow-y: auto;"></div>
                         </div>
                         
                         <div class="button-row">
-                            <button onclick="generateQuery()" class="primary">Generate Query</button>
+                            <button onclick="generateQuery()" class="primary">Generate Search Query</button>
                             <button onclick="clearAI()">Clear</button>
                         </div>
                         <div id="aiStatus" class="status"></div>
@@ -174,22 +178,22 @@ def home():
                             </select>
 
                             <label style="margin-top: 12px;">Query</label>
-                            <textarea id="boolQuery" placeholder="Example: compress* AND (device OR apparatus)"></textarea>
+                            <textarea id="boolQuery" placeholder="Example: (blood pressure OR cardiovascular) AND (monitoring OR detection) AND (wearable OR device)"></textarea>
                         </div>
 
                         <label style="margin-top: 12px;">Classification Filters (Optional)</label>
                         <div style="font-size: 11px; color: #666; margin-bottom: 8px;">
-                            Add IPC, CPC, or USPC codes to filter results. Examples: H02K1/00 or A61B
+                            Add IPC, CPC, or USPC codes to filter results.
                         </div>
                         
                         <label style="font-size: 12px;">IPC Classification (optional)</label>
-                        <textarea id="ipcCode" placeholder="e.g., A61B or H02K1/00&#10;Separate multiple codes with ;; (double semicolon)&#10;Example: A61B ;; H02K1/00 ;; A61M" style="min-height: 60px;"></textarea>
+                        <textarea id="ipcCode" placeholder="e.g., A61B or H02K1/00&#10;Separate multiple codes with ;;" style="min-height: 60px;"></textarea>
                         
                         <label style="font-size: 12px; margin-top: 8px;">CPC Classification (optional)</label>
-                        <textarea id="cpcCode" placeholder="e.g., H02K1/00 or A61M&#10;Separate multiple codes with ;; (double semicolon)&#10;Example: H02K1/00 ;; A61B5/02 ;; A61M" style="min-height: 60px;"></textarea>
+                        <textarea id="cpcCode" placeholder="e.g., H02K1/00 or A61B5/02&#10;Separate multiple codes with ;;" style="min-height: 60px;"></textarea>
 
                         <label style="font-size: 12px; margin-top: 8px;">Exclusion Keywords (optional)</label>
-                        <textarea id="exclusionKeywords" placeholder="Keywords to EXCLUDE from results&#10;Separate with ;; (double semicolon)&#10;Example: imaging ;; diabetes ;; glucose" style="min-height: 60px;"></textarea>
+                        <textarea id="exclusionKeywords" placeholder="Keywords to EXCLUDE from results&#10;Separate with ;;" style="min-height: 60px;"></textarea>
 
                         <label style="margin-top: 12px;">Sort (JSON)</label>
                         <textarea id="sort" style="min-height: 60px;">[{"created":"desc"}]</textarea>
@@ -242,9 +246,9 @@ def home():
         </div>
 
         <script>
-            let lastCountResult = null;
             let bestQuerySoFar = null;
             let bestFoundCount = 0;
+            let extractedKeywords = [];
 
             function switchMode() {
                 document.getElementById('booleanMode').style.display = 'block';
@@ -253,7 +257,7 @@ def home():
             async function searchPriorArt() {
                 const priorArtText = document.getElementById('priorArtPatents').value.trim();
                 if (!priorArtText) { 
-                    alert('Enter at least one patent ID'); 
+                    alert('Enter at least one patent ID to analyze'); 
                     return; 
                 }
 
@@ -262,7 +266,7 @@ def home():
                 const resultsDiv = document.getElementById('priorArtResults');
                 const resultsList = document.getElementById('priorArtResultsList');
 
-                st.textContent = `⏳ Searching Lens for ${patentIds.length} patent(s)...`;
+                st.textContent = `⏳ Analyzing ${patentIds.length} reference patent(s)...`;
                 st.className = 'status show info';
                 resultsDiv.style.display = 'none';
                 resultsList.innerHTML = '';
@@ -281,26 +285,49 @@ def home():
 
                         let html = '';
                         let foundCount = 0;
-                        let notFoundCount = 0;
+                        let extractedTerms = [];
 
                         results.forEach((result, idx) => {
                             if (result.found) {
                                 foundCount++;
-                                html += `<div style="margin: 10px 0; padding: 10px; background: white; border-left: 4px solid #28a745; border-radius: 4px;"><strong style="color: #28a745;">✅ Patent ${idx + 1} FOUND</strong><br><strong>Patent ID:</strong> ${result.patentId}<br><strong>Lens ID:</strong> ${result.lens_id}<br><strong>Title:</strong> ${result.title}<br><small style="color: #666;">Country: ${result.country || 'N/A'}</small></div>`;
+                                html += `<div style="margin: 10px 0; padding: 10px; background: white; border-left: 4px solid #28a745; border-radius: 4px;">
+                                    <strong style="color: #28a745;">✅ Patent ${idx + 1}</strong><br>
+                                    <strong>ID:</strong> ${result.patentId}<br>
+                                    <strong>Title:</strong> ${result.title}<br>
+                                    <small style="color: #666;">This patent helps establish technical vocabulary</small>
+                                </div>`;
+                                
+                                // Extract key terms from title
+                                const words = result.title.toLowerCase().split(' ');
+                                const keyTerms = words.filter(w => w.length > 4 && !['with', 'from', 'this', 'that', 'have', 'are', 'will', 'can', 'may', 'using', 'method', 'system', 'device', 'apparatus'].includes(w));
+                                extractedTerms.push(...keyTerms);
                             } else {
-                                notFoundCount++;
-                                html += `<div style="margin: 10px 0; padding: 10px; background: white; border-left: 4px solid #dc3545; border-radius: 4px;"><strong style="color: #dc3545;">❌ Patent ${idx + 1} NOT FOUND</strong><br><strong>Patent ID:</strong> ${result.patentId}<br><small style="color: #666;">The system could not find this patent in Lens. Check the patent ID format</small></div>`;
+                                html += `<div style="margin: 10px 0; padding: 10px; background: white; border-left: 4px solid #dc3545; border-radius: 4px;">
+                                    <strong style="color: #dc3545;">❌ Patent ${idx + 1} NOT FOUND</strong><br>
+                                    <strong>ID:</strong> ${result.patentId}<br>
+                                    <small>Please check the patent ID format</small>
+                                </div>`;
                             }
                         });
+
+                        // Display extracted keywords
+                        if (extractedTerms.length > 0) {
+                            const uniqueTerms = [...new Set(extractedTerms)].slice(0, 15);
+                            html += `<div style="margin-top: 15px; padding: 10px; background: #e3f2fd; border-radius: 4px;">
+                                <strong>📝 Extracted Technical Vocabulary:</strong><br>
+                                ${uniqueTerms.map(t => `<span class="keyword-badge">${t}</span>`).join(' ')}
+                            </div>`;
+                            window.extractedKeywords = uniqueTerms;
+                        }
 
                         resultsList.innerHTML = html;
                         resultsDiv.style.display = 'block';
 
-                        if (notFoundCount === 0) {
-                            st.textContent = `✅ Success! All ${foundCount} patents identified in Lens.`;
+                        if (foundCount > 0) {
+                            st.textContent = `✅ Analyzed ${foundCount} reference patent(s). Technical vocabulary extracted.`;
                             st.className = 'status show success';
                         } else {
-                            st.textContent = `⚠️ Found ${foundCount}/${patentIds.length} patents. ${notFoundCount} not found - please check the IDs and retry.`;
+                            st.textContent = `⚠️ No reference patents found. Please check patent IDs.`;
                             st.className = 'status show warning';
                         }
                     } else {
@@ -318,19 +345,22 @@ def home():
                 document.getElementById('priorArtSearchStatus').textContent = '';
                 document.getElementById('priorArtResults').style.display = 'none';
                 window.identifiedPatents = [];
+                window.extractedKeywords = [];
             }
 
             async function generateQuery() {
                 const inventionDesc = document.getElementById('inventionDescription').value.trim();
-                const priorArt = document.getElementById('priorArtPatents').value.trim();
                 
-                if (!inventionDesc) { alert('Enter an invention description'); return; }
+                if (!inventionDesc) { 
+                    alert('Please describe your invention first'); 
+                    return; 
+                }
 
                 const st = document.getElementById('aiStatus');
                 const vs = document.getElementById('validationStatus');
                 const historyDiv = document.getElementById('iterationHistory');
                 
-                st.textContent = '⏳ Generating query with AI...';
+                st.textContent = '⏳ Analyzing your invention and generating search query...';
                 st.className = 'status show info';
                 vs.textContent = '';
                 historyDiv.innerHTML = '';
@@ -338,13 +368,14 @@ def home():
                 bestFoundCount = 0;
 
                 try {
-                    let patentDetails = '';
+                    // Get prior art titles if available
+                    let priorArtTitles = '';
                     if (window.identifiedPatents && window.identifiedPatents.length > 0) {
                         const foundPatents = window.identifiedPatents.filter(p => p.found);
                         if (foundPatents.length > 0) {
-                            patentDetails = '\n\nPRIOR ART PATENT DETAILS (for keyword extraction):\n';
+                            priorArtTitles = '\n\nREFERENCE PATENTS (for vocabulary reference):\n';
                             foundPatents.forEach((patent, idx) => {
-                                patentDetails += `${idx + 1}. ${patent.patentId} (${patent.country})\n   Title: ${patent.title}\n`;
+                                priorArtTitles += `${idx + 1}. ${patent.title}\n`;
                             });
                         }
                     }
@@ -354,22 +385,24 @@ def home():
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({
                             invention: inventionDesc,
-                            priorArt: priorArt,
-                            patentDetails: patentDetails
+                            priorArtTitles: priorArtTitles,
+                            extractedKeywords: window.extractedKeywords || []
                         })
                     });
 
                     const data = await res.json();
                     if (res.ok) {
                         document.getElementById('generatedQuery').value = data.query;
-                        st.textContent = '✅ Query generated!';
+                        st.textContent = '✅ Search query generated!';
                         st.className = 'status show success';
                         
-                        if (window.identifiedPatents && window.identifiedPatents.length > 0) {
-                            const foundPatents = window.identifiedPatents.filter(p => p.found);
-                            if (foundPatents.length > 0) {
-                                await validateAndRefineQuery(data.query, foundPatents, historyDiv);
-                            }
+                        // Show extracted keywords
+                        if (data.keywords && data.keywords.length > 0) {
+                            const keywordHtml = `<div style="margin-top: 8px; padding: 8px; background: #f0f4ff; border-radius: 4px;">
+                                <strong>🔑 Key concepts identified:</strong><br>
+                                ${data.keywords.map(k => `<span class="keyword-badge">${k}</span>`).join(' ')}
+                            </div>`;
+                            vs.innerHTML = keywordHtml;
                         }
                     } else {
                         st.textContent = `❌ Error: ${data.error}`;
@@ -378,206 +411,6 @@ def home():
                 } catch (e) {
                     st.textContent = '❌ Failed: ' + e.message;
                     st.className = 'status show error';
-                }
-            }
-
-            async function validateAndRefineQuery(query, foundPatents, historyDiv) {
-                const vs = document.getElementById('validationStatus');
-                const maxIterations = 3;
-                let currentQuery = query;
-                let iteration = 0;
-                bestQuerySoFar = query;
-                bestFoundCount = 0;
-
-                vs.innerHTML = '⏳ Iteration 1: Validating query against ' + foundPatents.length + ' prior art patents...';
-                vs.className = 'status show info';
-
-                while (iteration < maxIterations) {
-                    iteration++;
-                    
-                    // Test current query
-                    const validationResult = await validateQueryAgainstPatents(currentQuery, foundPatents);
-                    const foundCount = validationResult.foundCount;
-                    const foundLensIds = validationResult.foundLensIds;
-                    
-                    // Track best query
-                    if (foundCount > bestFoundCount) {
-                        bestFoundCount = foundCount;
-                        bestQuerySoFar = currentQuery;
-                    }
-                    
-                    // Add to history
-                    const historyEntry = document.createElement('div');
-                    historyEntry.style.padding = '8px';
-                    historyEntry.style.margin = '4px 0';
-                    historyEntry.style.background = '#f5f5f5';
-                    historyEntry.style.borderRadius = '4px';
-                    historyEntry.innerHTML = `<strong>Iteration ${iteration}:</strong> Found ${foundCount}/${foundPatents.length} patents<br>
-                                              <span style="font-family: monospace; font-size: 10px;">Query: ${currentQuery.substring(0, 100)}${currentQuery.length > 100 ? '...' : ''}</span>`;
-                    historyDiv.appendChild(historyEntry);
-                    
-                    if (foundCount === foundPatents.length) {
-                        vs.innerHTML = '✅ <strong>Validation SUCCESS!</strong><br>All ' + foundPatents.length + ' prior art patents found!<br>Query is ready to use.';
-                        vs.className = 'status show success';
-                        return;
-                    } else if (iteration < maxIterations) {
-                        const missingPatents = foundPatents.filter(p => !foundLensIds.includes(p.lens_id));
-                        
-                        vs.innerHTML = '⚠️ Iteration ' + iteration + ': Found ' + foundCount + '/' + foundPatents.length + ' patents. Refining query to find ' + missingPatents.length + ' missing patent(s)...';
-                        vs.className = 'status show warning';
-                        
-                        const patentDetails = await getPatentDetailsForRefinement(missingPatents);
-                        
-                        if (patentDetails && patentDetails.length > 0) {
-                            const refinedQuery = await generateRefinedQuery(currentQuery, patentDetails);
-                            
-                            if (refinedQuery && refinedQuery !== currentQuery && validateBooleanQuery(refinedQuery)) {
-                                currentQuery = refinedQuery;
-                                document.getElementById('generatedQuery').value = currentQuery;
-                            } else {
-                                // If refinement fails or query is invalid, try a simpler approach
-                                vs.innerHTML += '<br>⚠️ Refinement produced invalid query, trying keyword-based approach...';
-                                const keywordQuery = await generateKeywordBasedQuery(patentDetails);
-                                if (keywordQuery && validateBooleanQuery(keywordQuery)) {
-                                    currentQuery = keywordQuery;
-                                    document.getElementById('generatedQuery').value = currentQuery;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Final check - use best query found
-                vs.innerHTML = `📊 <strong>Refinement complete after ${iteration} iterations.</strong><br>
-                               Best result: Found ${bestFoundCount}/${foundPatents.length} patents.<br>
-                               ${bestFoundCount === foundPatents.length ? '✅ All patents found!' : '⚠️ Could not find all patents. Try different prior art patents or refine manually.'}`;
-                vs.className = bestFoundCount === foundPatents.length ? 'status show success' : 'status show warning';
-                
-                if (bestQuerySoFar && bestQuerySoFar !== currentQuery) {
-                    document.getElementById('generatedQuery').value = bestQuerySoFar;
-                }
-            }
-            
-            function validateBooleanQuery(query) {
-                if (!query) return false;
-                // Basic validation: balanced parentheses
-                let balance = 0;
-                for (let char of query) {
-                    if (char === '(') balance++;
-                    if (char === ')') balance--;
-                    if (balance < 0) return false;
-                }
-                return balance === 0;
-            }
-
-            async function validateQueryAgainstPatents(query, foundPatents) {
-                try {
-                    const tokens = tokenize(query);
-                    const queryObj = parseQuery(tokens, 'abstract');
-
-                    const req = {
-                        query: queryObj,
-                        size: 100,
-                        from: 0,
-                        _source: {includes: ['lens_id']}
-                    };
-
-                    const res = await fetch('/api/search', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({request: req})
-                    });
-
-                    const data = await res.json();
-                    if (res.ok && data.response && data.response.data) {
-                        const results = data.response.data;
-                        const resultLensIds = results.map(p => p.lens_id).filter(id => id);
-
-                        let foundCount = 0;
-                        let foundLensIds = [];
-
-                        foundPatents.forEach(patent => {
-                            if (resultLensIds.includes(patent.lens_id)) {
-                                foundCount++;
-                                foundLensIds.push(patent.lens_id);
-                            }
-                        });
-
-                        return { foundCount: foundCount, foundLensIds: foundLensIds };
-                    } else {
-                        return { foundCount: 0, foundLensIds: [] };
-                    }
-                } catch (e) {
-                    console.error('Validation error:', e);
-                    return { foundCount: 0, foundLensIds: [] };
-                }
-            }
-
-            async function getPatentDetailsForRefinement(patents) {
-                try {
-                    const lensIds = patents.map(p => p.lens_id).filter(id => id);
-                    if (lensIds.length === 0) return [];
-                    
-                    const res = await fetch('/api/get-patent-details', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({lensIds: lensIds})
-                    });
-
-                    const data = await res.json();
-                    return data.results || [];
-                } catch (e) {
-                    console.error('Error in getPatentDetailsForRefinement:', e);
-                    return [];
-                }
-            }
-
-            async function generateRefinedQuery(currentQuery, patentDetails) {
-                try {
-                    if (!patentDetails || patentDetails.length === 0) {
-                        return currentQuery;
-                    }
-
-                    const response = await fetch('/api/refine-query', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({
-                            current_query: currentQuery,
-                            patent_details: patentDetails
-                        })
-                    });
-
-                    const data = await response.json();
-                    if (response.ok && data.refined_query) {
-                        return data.refined_query;
-                    } else {
-                        return currentQuery;
-                    }
-                } catch (e) {
-                    console.error('Error in generateRefinedQuery:', e);
-                    return currentQuery;
-                }
-            }
-            
-            async function generateKeywordBasedQuery(patentDetails) {
-                try {
-                    const response = await fetch('/api/keyword-query', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({
-                            patent_details: patentDetails
-                        })
-                    });
-
-                    const data = await response.json();
-                    if (response.ok && data.query) {
-                        return data.query;
-                    } else {
-                        return null;
-                    }
-                } catch (e) {
-                    console.error('Error in generateKeywordBasedQuery:', e);
-                    return null;
                 }
             }
 
@@ -605,6 +438,8 @@ def home():
                 document.getElementById('aiStatus').textContent = '';
                 document.getElementById('validationStatus').textContent = '';
                 document.getElementById('iterationHistory').innerHTML = '';
+                window.identifiedPatents = [];
+                window.extractedKeywords = [];
                 bestQuerySoFar = null;
                 bestFoundCount = 0;
             }
@@ -684,14 +519,12 @@ def home():
 
             function build() {
                 try {
-                    const mode = document.getElementById('mode').value;
-                    let q = {};
-
                     const qstr = document.getElementById('boolQuery').value.trim();
                     const fieldOpt = document.getElementById('boolField').value;
                     if (!qstr) throw new Error('Enter query');
                     const toks = tokenize(qstr);
                     
+                    let q = {};
                     if (fieldOpt === 'all') {
                         const fields = ['biblio.invention_title', 'abstract', 'claims'];
                         const queries = fields.map(f => parseQuery(toks.slice(), f));
@@ -716,7 +549,7 @@ def home():
                         size: sz,
                         from: 0,
                         _source: {
-                            includes: ['lens_id', 'biblio.invention_title', 'legal_status', 'biblio.priority_claims', 'abstract', 'biblio.classifications_ipc', 'biblio.classifications_cpc']
+                            includes: ['lens_id', 'biblio.invention_title', 'legal_status', 'abstract', 'claims', 'biblio.classifications_ipc', 'biblio.classifications_cpc']
                         },
                         sort: so
                     };
@@ -730,39 +563,16 @@ def home():
                     
                     if (ipcCodes.length > 0 || cpcCodes.length > 0) {
                         let queryParts = [];
-                        
-                        ipcCodes.forEach(code => {
-                            queryParts.push('class_ipcr.symbol:' + code + '*');
-                        });
-                        
-                        cpcCodes.forEach(code => {
-                            queryParts.push('class_cpc.symbol:' + code + '*');
-                        });
+                        ipcCodes.forEach(code => { queryParts.push('class_ipcr.symbol:' + code + '*'); });
+                        cpcCodes.forEach(code => { queryParts.push('class_cpc.symbol:' + code + '*'); });
                         
                         const filterQuery = queryParts.join(' OR ');
-                        
                         if (filterQuery) {
-                            req.query = {
-                                bool: {
-                                    must: [q],
-                                    filter: {
-                                        query_string: {
-                                            query: filterQuery
-                                        }
-                                    }
-                                }
-                            };
-                            if (mustNotClauses.length > 0) {
-                                req.query.bool.must_not = mustNotClauses;
-                            }
+                            req.query = { bool: { must: [q], filter: { query_string: { query: filterQuery } } } };
+                            if (mustNotClauses.length > 0) req.query.bool.must_not = mustNotClauses;
                         }
                     } else if (mustNotClauses.length > 0) {
-                        req.query = {
-                            bool: {
-                                must: [q],
-                                must_not: mustNotClauses
-                            }
-                        };
+                        req.query = { bool: { must: [q], must_not: mustNotClauses } };
                     }
 
                     document.getElementById('requestBody').value = JSON.stringify(req, null, 2);
@@ -904,8 +714,6 @@ def home():
         .label { font-weight: bold; color: #666; }
         .value { color: #333; margin-left: 10px; }
         .classifications { background: #f0f4ff; padding: 10px; border-radius: 4px; margin: 10px 0; }
-        .ipc { color: #667eea; font-weight: bold; }
-        .cpc { color: #764ba2; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -918,9 +726,6 @@ def home():
                     patents.forEach((patent, index) => {
                         const title = patent.biblio?.invention_title?.[0]?.text || 'N/A';
                         const abstract = patent.abstract?.[0]?.text || 'N/A';
-                        const status = patent.legal_status?.patent_status || 'N/A';
-                        const ipc = patent.biblio?.classifications_ipc?.main_classification || 'N/A';
-                        const cpc = patent.biblio?.classifications_cpc?.symbol || 'N/A';
                         const lensId = patent.lens_id || 'N/A';
                         
                         html += `
@@ -931,30 +736,14 @@ def home():
                 <span class="value">${lensId}</span>
             </div>
             <div class="field">
-                <span class="label">Status:</span>
-                <span class="value">${status}</span>
-            </div>
-            <div class="classifications">
-                <div class="field">
-                    <span class="ipc">IPC: ${ipc}</span>
-                </div>
-                <div class="field">
-                    <span class="cpc">CPC: ${cpc}</span>
-                </div>
-            </div>
-            <div class="field">
                 <span class="label">Abstract:</span>
-                <div class="value">${abstract}</div>
+                <div class="value">${abstract.substring(0, 300)}${abstract.length > 300 ? '...' : ''}</div>
             </div>
         </div>
 `;
                     });
                     
-                    html += `
-    </div>
-</body>
-</html>`;
-                    
+                    html += `</div></body></html>`;
                     const blob = new Blob([html], {type: 'text/html'});
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -977,7 +766,7 @@ def home():
 
 @app.route('/api/get-patent-details', methods=['POST'])
 def get_patent_details():
-    """Fetch full patent details by Lens ID for keyword extraction"""
+    """Fetch full patent details by Lens ID"""
     try:
         if not ENV_API_KEY:
             return jsonify({'error': 'Lens API key not configured'}), 400
@@ -1028,143 +817,6 @@ def get_patent_details():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/keyword-query', methods=['POST'])
-def keyword_query():
-    """Generate a simple keyword-based query from patent details"""
-    try:
-        if not OPENAI_API_KEY:
-            return jsonify({'error': 'OpenAI API key not configured'}), 400
-
-        data = request.get_json() or {}
-        patent_details = data.get('patent_details', [])
-
-        if not patent_details:
-            return jsonify({'error': 'No patent details provided'}), 400
-
-        # Extract keywords from titles
-        keywords = []
-        for patent in patent_details:
-            title = patent.get('title', '')
-            if title and title != 'N/A':
-                # Simple keyword extraction - get words longer than 4 chars
-                words = re.findall(r'\b[a-zA-Z]{4,}\b', title)
-                keywords.extend(words)
-        
-        # Remove duplicates and limit
-        unique_keywords = list(set(keywords))[:8]
-        
-        if not unique_keywords:
-            return jsonify({'query': None}), 200
-        
-        # Build simple OR query
-        if len(unique_keywords) <= 3:
-            query = '(' + ' OR '.join(unique_keywords) + ')'
-        else:
-            # Split into two groups
-            mid = len(unique_keywords) // 2
-            group1 = '(' + ' OR '.join(unique_keywords[:mid]) + ')'
-            group2 = '(' + ' OR '.join(unique_keywords[mid:]) + ')'
-            query = group1 + ' AND ' + group2
-        
-        return jsonify({'query': query}), 200
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/refine-query', methods=['POST'])
-def refine_query():
-    """Refine a boolean query based on missing patent details"""
-    try:
-        if not OPENAI_API_KEY:
-            return jsonify({'error': 'OpenAI API key not configured'}), 400
-
-        data = request.get_json() or {}
-        current_query = data.get('current_query', '')
-        patent_details = data.get('patent_details', [])
-
-        if not current_query or not patent_details:
-            return jsonify({'error': 'Missing current query or patent details'}), 400
-
-        # Prepare patent details
-        patents_text = ""
-        for idx, patent in enumerate(patent_details):
-            if patent.get('found', True):
-                title = patent.get('title', 'N/A')
-                abstract = patent.get('abstract', 'N/A')[:500]
-                
-                patents_text += f"\n{idx + 1}. Patent {patent.get('lens_id', 'Unknown')}:\n"
-                patents_text += f"   Title: {title}\n"
-                patents_text += f"   Abstract: {abstract}\n"
-
-        system_prompt = """You are a patent search specialist. Your task is to refine a boolean query to find missing patents.
-
-CRITICAL RULES:
-1. Extract keywords DIRECTLY from the patent titles and abstracts
-2. Build query using: (keyword1 OR keyword2) AND (keyword3 OR keyword4)
-3. NEVER use AND inside parentheses
-4. Keep the query simple - 2-3 groups maximum
-5. If the current query already has good parts, keep them and add missing keywords
-
-Output ONLY the refined query, nothing else."""
-
-        user_message = f"""CURRENT QUERY (found some patents but not all):
-{current_query}
-
-MISSING PATENTS THAT NEED TO BE FOUND:
-{patents_text}
-
-TASK: Create a refined query that will find these missing patents.
-Extract keywords from the titles and abstracts above.
-Combine with relevant parts of the current query if they are useful.
-
-Output ONLY the query string."""
-
-        response = requests.post(
-            'https://api.openai.com/v1/chat/completions',
-            headers={'Authorization': f'Bearer {OPENAI_API_KEY}'},
-            json={
-                'model': 'gpt-4o',
-                'messages': [
-                    {'role': 'system', 'content': system_prompt},
-                    {'role': 'user', 'content': user_message}
-                ],
-                'temperature': 0.2,
-                'max_tokens': 400
-            },
-            timeout=30
-        )
-
-        if response.status_code == 200:
-            result = response.json()
-            refined_query = result['choices'][0]['message']['content'].strip()
-            
-            # Validate and simplify
-            if refined_query:
-                refined_query = simplified_query(refined_query)
-            
-            return jsonify({'refined_query': refined_query}), 200
-        else:
-            return jsonify({'error': f'OpenAI error: {response.status_code}'}), response.status_code
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-def simplified_query(query):
-    """Simplify a query by removing excessive parentheses and whitespace"""
-    if not query:
-        return query
-    
-    # Remove double parentheses
-    while '((' in query:
-        query = query.replace('((', '(')
-    while '))' in query:
-        query = query.replace('))', ')')
-    
-    # Clean up spaces
-    query = re.sub(r'\s+', ' ', query)
-    
-    return query.strip()
-
 @app.route('/api/search-prior-art', methods=['POST'])
 def search_prior_art():
     """Search Lens database to identify patents by their IDs"""
@@ -1186,11 +838,6 @@ def search_prior_art():
             if idx > 0:
                 time.sleep(0.5)
             
-            # Try multiple search strategies
-            found = False
-            patent_data = None
-            
-            # Strategy 1: Search by ID directly
             search_request = {
                 "query": {"match": {"ids": patent_id}},
                 "size": 1,
@@ -1206,88 +853,89 @@ def search_prior_art():
                     patents = response_data.get('data', [])
                     
                     if patents:
-                        found = True
-                        patent_data = patents[0]
+                        patent = patents[0]
+                        results.append({
+                            'found': True,
+                            'patentId': patent_id,
+                            'lens_id': patent.get('lens_id', 'N/A'),
+                            'title': patent.get('biblio', {}).get('invention_title', [{}])[0].get('text', 'N/A') if isinstance(patent.get('biblio', {}).get('invention_title'), list) else 'N/A',
+                            'country': patent.get('country', 'N/A'),
+                            'doc_number': patent.get('doc_number', 'N/A'),
+                            'kind': patent.get('kind', 'N/A')
+                        })
+                    else:
+                        results.append({'found': False, 'patentId': patent_id})
+                else:
+                    results.append({'found': False, 'patentId': patent_id})
             except:
-                pass
-            
-            if found and patent_data:
-                results.append({
-                    'found': True,
-                    'patentId': patent_id,
-                    'lens_id': patent_data.get('lens_id', 'N/A'),
-                    'title': patent_data.get('biblio', {}).get('invention_title', [{}])[0].get('text', 'N/A') if isinstance(patent_data.get('biblio', {}).get('invention_title'), list) else 'N/A',
-                    'country': patent_data.get('country', 'N/A'),
-                    'doc_number': patent_data.get('doc_number', 'N/A'),
-                    'kind': patent_data.get('kind', 'N/A')
-                })
-            else:
-                results.append({
-                    'found': False,
-                    'patentId': patent_id,
-                    'lens_id': None,
-                    'title': None,
-                    'country': None
-                })
+                results.append({'found': False, 'patentId': patent_id})
 
         return jsonify({'results': results}), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
 @app.route('/api/generate-query', methods=['POST'])
 def generate_query():
-    """Generate a boolean search query from invention description and optional prior art patents"""
+    """Generate a boolean search query based on invention description and prior art terminology"""
     try:
         if not OPENAI_API_KEY:
             return jsonify({'error': 'OpenAI API key not configured'}), 400
 
         data = request.get_json() or {}
         invention = data.get('invention', '').strip()
-        prior_art = data.get('priorArt', '').strip()
-        patent_details = data.get('patentDetails', '').strip()
+        prior_art_titles = data.get('priorArtTitles', '').strip()
+        extracted_keywords = data.get('extractedKeywords', [])
 
         if not invention:
             return jsonify({'error': 'No invention description provided'}), 400
 
-        system_prompt = """You are a patent search specialist. Create a boolean query that will find relevant patents.
+        system_prompt = """You are a patent search specialist. Your task is to create a boolean search query that will find patents describing a specific invention.
 
-CRITICAL: If prior art patents are provided, extract keywords DIRECTLY from their titles.
+CRITICAL PRINCIPLE:
+- The INVENTION DESCRIPTION is the PRIMARY source for what to search for
+- Reference patents (if provided) help you understand the TECHNICAL VOCABULARY used in this field
+- The goal is to find patents that describe the INVENTION, not just the reference patents
 
-QUERY STRUCTURE:
-- Use groups: (term1 OR term2) AND (term3 OR term4)
-- NEVER use AND inside parentheses
-- 2-3 groups maximum
-- Use word* for variations when appropriate
+QUERY STRUCTURE RULES:
+1. Use groups: (term1 OR term2) AND (term3 OR term4) AND (term5 OR term6)
+2. Each group represents a key CONCEPT from your invention
+3. NEVER use AND inside parentheses - only OR inside groups
+4. 2-3 groups maximum - keep it focused
+5. Use word* for variations when appropriate (e.g., monitor* for monitor, monitoring, monitored)
 
-Output ONLY the query, nothing else."""
+HOW TO BUILD THE QUERY:
+1. Read the invention description carefully
+2. Identify 2-3 key concepts (what it does, how it works, what it's made of)
+3. For each concept, list 2-3 synonyms or related terms
+4. If reference patents are provided, check if they use specific terminology for these concepts
+5. Format as: (synonym1 OR synonym2) AND (term3 OR term4)
 
-        if patent_details:
-            # Extract titles
-            titles = []
-            for line in patent_details.split('\n'):
-                if 'Title:' in line:
-                    title = line.split('Title:', 1)[1].strip()
-                    if title and title != 'N/A':
-                        titles.append(title)
-            
-            user_message = f"""INVENTION: {invention}
+EXAMPLE:
+Invention: "A wearable device that continuously monitors blood pressure using optical sensors"
+Query: (wearable OR wristband OR portable) AND (blood pressure OR cardiovascular OR hypertension) AND (monitor* OR detect* OR sensor*)
 
-PRIOR ART PATENTS (YOUR QUERY MUST FIND THESE):
+Output ONLY the query string, nothing else."""
+
+        user_message = f"""INVENTION DESCRIPTION (PRIMARY SOURCE):
+{invention}
+
 """
-            for i, title in enumerate(titles, 1):
-                user_message += f"{i}. {title}\n"
-            
-            user_message += "\nCreate a query that will find these patents. Extract keywords from the titles above."
+        if prior_art_titles:
+            user_message += f"""REFERENCE PATENTS (for technical vocabulary reference):
+{prior_art_titles}
+
+"""
+        if extracted_keywords:
+            user_message += f"""EXTRACTED TECHNICAL VOCABULARY from reference patents:
+{', '.join(extracted_keywords[:15])}
+
+"""
         
-        elif prior_art:
-            user_message = f"""INVENTION: {invention}
-PRIOR ART PATENT IDs: {prior_art}
-Create a query that would retrieve patents similar to these."""
-        else:
-            user_message = f"""INVENTION: {invention}
-Create a query to find related patents."""
+        user_message += """TASK: Create a boolean query to find patents that describe this invention.
+Focus on the key concepts from the invention description.
+Use the technical vocabulary from reference patents to inform your term selection.
+Output ONLY the query."""
 
         response = requests.post(
             'https://api.openai.com/v1/chat/completions',
@@ -1299,7 +947,7 @@ Create a query to find related patents."""
                     {'role': 'user', 'content': user_message}
                 ],
                 'temperature': 0.2,
-                'max_tokens': 300
+                'max_tokens': 400
             },
             timeout=30
         )
@@ -1307,12 +955,18 @@ Create a query to find related patents."""
         if response.status_code == 200:
             result = response.json()
             query = result['choices'][0]['message']['content'].strip()
-            query = simplified_query(query)
+            query = simplify_query(query)
+            
+            # Extract keywords from the invention description for display
+            words = re.findall(r'\b[a-zA-Z]{4,}\b', invention.lower())
+            stopwords = {'with', 'from', 'this', 'that', 'have', 'are', 'will', 'can', 'may', 'using', 'method', 'system', 'device', 'apparatus', 'invention', 'described'}
+            keywords = list(set([w for w in words if w not in stopwords]))[:10]
             
             print(f"\n=== Generated Query ===")
             print(f"Query: {query}")
+            print(f"Key concepts: {keywords}")
             
-            return jsonify({'query': query}), 200
+            return jsonify({'query': query, 'keywords': keywords}), 200
         else:
             return jsonify({'error': f'OpenAI error: {response.status_code}'}), response.status_code
 
@@ -1375,4 +1029,7 @@ def search():
 if __name__ == '__main__':
     status = "✅ Both APIs configured" if (ENV_API_KEY and OPENAI_API_KEY) else "⚠️  Check .env file"
     print(f"\n🚀 Lens Patent API Client with AI\n📍 http://localhost:5000\n{status}\n")
+    print("💡 TIP: The system prioritizes your INVENTION DESCRIPTION")
+    print("   Reference patents are used ONLY for technical vocabulary")
+    print("   This ensures results are relevant to YOUR invention\n")
     app.run(debug=False, host='127.0.0.1', port=5000)
