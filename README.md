@@ -71,11 +71,13 @@ This example demonstrates searching for patents related to AI-powered blood pres
 
 - **Write a description of your invention** 
 ![Description](images/Patlens01.jpg)
-- **Add the prior art serial numbers, separated by ;;** 
+- **Add the prior art serial numbers, separated by ;; and click Search Prior Art** The program then will search The Lens database for those documents
 ![Prior art](images/Patlens02.jpg)
-- **Just follow the steps** to create a search list.
+- **Click on Generate Query** to create a search list, the AI agent will refine the search untill it finds all or most of the patent documents listed as prior art.
 ![Refining the search](images/Patlens03.jpg)
+- **Use this query** to continue towards the search list retrieval
 ![Use this](images/Patlens04.jpg)
+- **Add IPC classifications and unwanted keywords** Also, by default the result list is 10 documents long, you may prefer to check how many documents can be retrieved with this search logic and then, change how many will be retrieved
 ![And tweak](images/Patlens05.jpg)
 ### Example Patents
 
