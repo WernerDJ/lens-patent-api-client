@@ -69,6 +69,14 @@ This documentation will help you understand how to customize queries and make th
 
 This example demonstrates searching for patents related to AI-powered blood pressure monitoring systems.
 
+- **Write a description of your invention** 
+![Description](images/Patlens01.jpg)
+- **Add the prior art serial numbers, separated by ;;** 
+![Prior art](images/Patlens02.jpg)
+- **Just follow the steps** to create a search list.
+![Refining the search](images/Patlens03.jpg)
+![Use this](images/Patlens04.jpg)
+![And tweak](images/Patlens05.jpg)
 ### Example Patents
 
 These three patents make a good example for testing the application:
