@@ -1,6 +1,6 @@
 # Lens Patent API Client
 
-A powerful web-based patent search tool that leverages the Lens Patent API with advanced boolean query building, AI-powered query generation, and result filtering capabilities.
+A web-based patent search tool that makes use of the Lens Patent API with very intuitive and user friendly AI assisted boolean query generation and result filtering capabilities.
 
 ## Overview
 
@@ -54,7 +54,7 @@ This documentation will help you understand how to customize queries and make th
    OPENAI_API_KEY=your_openai_api_key_here
    ```
 
-   - **Lens API Key**: Get from [Lens.org API](https://www.lens.org/settings/api)
+   - **Lens API Key**: Get from [Lens.org API](https://www.lens.org/lens/user/subscriptions)
    - **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/api-keys)
 
 5. **Run the server**
@@ -101,7 +101,7 @@ These three patents make a good example for testing the application:
 
 3. **Search**
    - Click "Check Count" to see total matching results
-   - Set "Results Size" to anything else than 10, by default, and  click again "Build Request"
+   - By default the results list has 10 documents, if you wish to retrieve more set "Results Size" to anything else than 10, and  click again "Build Request"
    - Click "Retrieve Results"
 
 4. **Export**
